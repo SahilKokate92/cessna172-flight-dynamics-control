@@ -1,0 +1,49 @@
+# MATLAB & Simulink
+# Autosave and backup files
+*.asv
+*.autosave
+*.m~
+*.slx.autosave
+
+# Simulink project cache, generated code, and simulation caches
+slprj/
+*.slxc
+_codegen/
+codegen/
+
+# MATLAB figures, crash dumps, and history
+*.fig.autosave
+matlab_crash_dump.*
+octave-workspace
+
+# MEX binaries (OS-specific compiled files)
+*.mex*
+*.mexa64
+*.mexw64
+*.mexmaci64
+
+# MATLAB Live Script auto-generated temporary export files
+*.mlx.autosave
+
+
+# Operating System & IDE Files
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VS Code / Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Optional: Heavy Data Files (Uncomment if needed)
+# *.mat
+# *.csv
+# *.log
