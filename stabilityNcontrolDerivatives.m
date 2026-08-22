@@ -8,7 +8,7 @@ CD_jh = 0;
 CL0 = 0.31;
 CL_alpha = 5.143;
 CL_q = 3.9;
-Cl_del_e = 0.43;
+CL_del_e = 0.43;
 CL_jh = 0;
 
 CY_beta = -0.31;
@@ -21,7 +21,7 @@ Cl0 = 0;
 Cl_beta = -0.089;
 Cl_p = -0.47;
 Cl_r = 0.096;
-CL_del_a = -0.178;
+Cl_del_a = -0.178;
 Cl_del_r = 0.0147;
 
 Cm0 = -0.015;
