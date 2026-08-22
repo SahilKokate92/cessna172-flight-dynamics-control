@@ -1,10 +1,9 @@
 % function for 12 ODE
 
+
 function xdot = C172NonlinearModel(t, x, U)
 
-% Dynamic pressure
-rho = 1.225; % density sea level (kg/m3)
-q = 0.5*rho*V^2
+run("initializeParameters_C172.m");
 
 % Extract States
 V     = x(1);   % Airspeed (m/s)
@@ -41,23 +40,27 @@ CL = CL0 + CL_alpha*alpha + CL_q*q_hat + CL_del_e*del_e;
 CY = CY_beta*beta + CY_p*p_hat + CY_r*r_hat + CY_del_a*del_a + CY_del_r*del_r;
 
 % Aerodynamic moment coefficients
-Cl = Cl_beta*beta + CL_p*p_hat + Cl_r*r_hat + Cl_del_a*del_a + Cl_del_r*del_r;
+Cl = Cl_beta*beta + Cl_p*p_hat + Cl_r*r_hat + Cl_del_a*del_a + Cl_del_r*del_r;
 Cm = Cm0 + Cm_alpha*alpha + Cm_q*q_hat + Cm_del_e*del_e;
 Cn = Cn_beta*beta + Cn_p*p_hat + Cn_r*r_hat + Cn_del_a*del_a + Cn_del_r*del_r;
 
-% Forces and Moments
-D = q*S*CD;         % Drag force (N)
-L = q*S*CL;         % Lift Force (N)
-Y = q*S*CY;         % Side force (N)
+% Dynamic pressure
+rho = 1.225; % density sea level (kg/m3)
+qbar = 0.5*rho*V^2;
 
-L = q*S*b*Cl;       % Rolling Moment (Nm)
-M = q*S*c_bar*Cm;   % Pitching Moment (Nm)
-N = q*S*c_bar*Cn;   % Yawing Moment (Nm)
+% Forces and Moments
+Drag = qbar*S*CD;         % Drag force (N)
+Lift = qbar*S*CL;         % Lift Force (N)
+Y    = qbar*S*CY;         % Side force (N)
+
+L = qbar*S*b*Cl;       % Rolling Moment (Nm)
+M = qbar*S*c_bar*Cm;   % Pitching Moment (Nm)
+N = qbar*S*b*Cn;   % Yawing Moment (Nm)
 
 % Converting into body axis Aerodynamics forces
-X_aero = -D*cos(alpha) + L*sin(alpha);
-Y_aero = Y;
-Z_aero = -D*sin(alpha) - L*cos(alpha);
+X_aero = -Drag*cos(alpha)*cos(beta) + Y*cos(alpha)*sin(beta) + Lift*sin(alpha);
+Y_aero = -Drag*sin(beta) + Y*cos(beta);
+Z_aero = -Drag*sin(alpha)*cos(beta) + Y*sin(alpha)*sin(beta) - Lift*cos(alpha);
 
 % Propulsion model
 % assuming max thrust = 2500 N
@@ -69,8 +72,9 @@ Y_thrust = 0;
 Z_thrust = 0;
 
 % Gravity forces in body axis
+g = 9.81;
 X_gravity = -m*g*sin(theta);
-Y_gravity =  m*g*sin(phi)*cos(phi);
+Y_gravity =  m*g*sin(phi)*cos(theta);
 Z_gravity =  m*g*cos(phi)*cos(theta);
 
 % Total forces
@@ -79,21 +83,21 @@ Fy = Y_aero + Y_thrust + Y_gravity;
 Fz = Z_aero + Z_thrust + Z_gravity;
 
 %% Translational EOM
-V_dot = (1/m)*(Fx*cos(alpha)*cos(beta) + Fy*sin(beta) + Fz*sin(alpha)*sin(beta) );
+V_dot = (1/m)*(Fx*cos(alpha)*cos(beta) + Fy*sin(beta) + Fz*sin(alpha)*cos(beta) );
 
-alpha_dot = (1/(2*cos(beta))) * ( (1/m) (-Fx*sin(alpha) + Fz*cos(alpha)) ) ...
+alpha_dot = (1/(V*cos(beta))) * ( (1/m) * (-Fx*sin(alpha) + Fz*cos(alpha)) ) ...
                + q - (p*cos(alpha) + r*sin(alpha)) * tan(beta);
 
 beta_dot = (1/V)* ( (1/m) * (-Fx*cos(alpha)*sin(beta) + Fy*cos(beta) - Fz*sin(alpha)*sin(beta)) ) ...
                + p*sin(alpha) - r*cos(alpha);
 
 %% Rotational EOM
-Gamma = inertia.Ixx * inertia.Izz - (inertia.Izz)^2;
+Gamma = inertia.Ixx*inertia.Izz - inertia.Jxz^2;
 
 p_dot =  ( ( inertia.Izz*L + inertia.Jxz*N + inertia.Jxz * (inertia.Ixx - inertia.Iyy + inertia.Izz) * p*q ...
                - (inertia.Izz*(inertia.Izz - inertia.Iyy) + (inertia.Jxz)^2 )* q*r ) ) / Gamma ; 
 
-q_dot =  ( M + (inertia.Izz - inertia.Ixx)* p*r + inertia.Jxy * (r^2 + p^2) ) / inertia.Iyy ;
+q_dot =  ( M + (inertia.Izz - inertia.Ixx)* p*r + inertia.Jxz * (r^2 - p^2) ) / inertia.Iyy ;
 
 r_dot =  ( inertia.Jxz*L + inertia.Ixx*N + ( (inertia.Ixx - inertia.Iyy) * inertia.Ixx + (inertia.Jxz)^2 ) * p*q ...
                + inertia.Jxz * (- inertia.Ixx + inertia.Iyy - inertia.Izz) * q*r ) / Gamma ; 
@@ -103,7 +107,7 @@ phi_dot = p + (q*sin(phi) + r*cos(phi)) * tan(theta);
 
 theta_dot = q*cos(phi) - r*sin(phi);
 
-psi_dot = q*sin(phi) + r*cos(phi)*cos(theta);
+psi_dot = (q*sin(phi) + r*cos(phi))/cos(theta);
 
 %% body axis velocity component uvw
 u = V*cos(alpha)*cos(beta);
@@ -114,10 +118,10 @@ w = V*sin(alpha)*cos(beta);
 xe_dot = ( u*cos(theta) + ( v*sin(phi)+w*cos(phi) ) * sin(theta) ) * cos(psi) ...
              - ( v*cos(phi) - w*sin(phi) ) * sin(psi) ;
 
-ye_dot = ( u*cos(theta) + ( v*sin(phi)+w*cos(phi) ) * sin(theta) * sin(psi) ) ...
-             + ( v*cos(phi) - w*sin(phi) ) * cos(psi) ;
+ye_dot = (u*cos(theta) + (v*sin(phi) + w*cos(phi))*sin(theta))*sin(psi) ...
+             + (v*cos(phi) - w*sin(phi))*cos(psi);
 
-ze_dot = u*sin(theta) - ( v*sin(phi) + w*cos(phi) ) * cos(theta) ;
+ze_dot = -u*sin(theta) + ( v*sin(phi) + w*cos(phi) ) * cos(theta) ;
 
 %% body velocities u_dot, v_dot, w_dot
 % u_dot = (Fx/m) - q*w + r*v;
