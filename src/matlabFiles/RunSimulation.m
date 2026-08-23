@@ -3,15 +3,15 @@ clear
 close all
 
 run("initializeParameters_C172.m")
-
+run("trimAndStability.m")
 ts = 60;     % simulation time (s)
 t_span = [0 ts];
 
 % Initial conditions
-x0 = [V_cruise; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0;];
+x0 = x_trim;
 
 % Control input
-U = [0; 0; 0; 0.7];
+U = U_trim;
 
 %% Solving by using ODE45 function
 
