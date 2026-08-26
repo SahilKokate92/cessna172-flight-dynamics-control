@@ -150,13 +150,13 @@ ax.GridAlpha = 0.3;
 drawnow;
 
 disp('---------------------------------------------------------');
-disp('✔ Combined Plots Rendered & Displayed');
+disp('Combined Plots Rendered & Displayed');
 
 % Separate Individual Figure Windows
-plot_sep = input('\n📊 Do you want to generate each plot in a separate individual figure window? (y/n) [n]: ', 's');
+plot_sep = input('\n Do you want to generate each plot in a separate individual figure window? (y/n) [n]: ', 's');
 
 if strcmpi(strtrim(plot_sep), 'y') || strcmpi(strtrim(plot_sep), 'yes')
-    disp('⏳ Generating individual separate figures for each state/plot...');
+    disp('Generating individual separate figures for each state/plot...');
     
     % 1. Airspeed
     fig_v = figure('Name', 'Separate Plot - Airspeed (V)', 'Color', 'w', 'Units', 'normalized', 'Position', [0.10, 0.50, 0.40, 0.40]);
@@ -225,12 +225,12 @@ if strcmpi(strtrim(plot_sep), 'y') || strcmpi(strtrim(plot_sep), 'yes')
     xlabel('East Position Y_e (m)', 'FontSize', 11); ylabel('North Position X_e (m)', 'FontSize', 11);
     legend('Location', 'best');
 
-    disp('✔ Separate Individual Figure Windows Generated Successfully');
+    disp('Separate Individual Figure Windows Generated Successfully');
     drawnow;
 end
 
 % Saving Generated Plots
-save_choice = input('\n💾 Do you want to save all generated plots to results folder? (y/n) [n]: ', 's');
+save_choice = input('\n Do you want to save all generated plots to results folder? (y/n) [n]: ', 's');
 
 if strcmpi(strtrim(save_choice), 'y') || strcmpi(strtrim(save_choice), 'yes')
     % Define absolute target results directory
@@ -241,7 +241,7 @@ if strcmpi(strtrim(save_choice), 'y') || strcmpi(strtrim(save_choice), 'yes')
         mkdir(results_dir);
     end
     
-    disp('⏳ Saving generated figures to results directory...');
+    disp('Saving generated figures to results directory...');
     
     % Save Combined Figures
     if exist('fig1', 'var') && ishandle(fig1)
@@ -271,5 +271,5 @@ if strcmpi(strtrim(save_choice), 'y') || strcmpi(strtrim(save_choice), 'yes')
         saveas(fig_pos, fullfile(results_dir, 'Ground_Track_2D.png'));
     end
     
-    fprintf('💾 All generated plots successfully saved to:\n   %s\n\n', results_dir);
+    fprintf('All generated plots successfully saved to:\n   %s\n\n', results_dir);
 end

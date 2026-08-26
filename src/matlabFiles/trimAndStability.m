@@ -26,7 +26,7 @@ z0 = [0.02; 0.0; 0.0; 0.0; 0.0; 0.0; 0.02; 0.0; 0.0; 0.0; 0.5];
 options = optimoptions('fsolve', 'Display', 'iter','TolFun', 1e-12,'TolX', 1e-12, 'MaxFunEvals', 2000, 'MaxIter', 1000);
 
 % Execute fsolve for Full 12-State Trim
-disp('⏳ Running fsolve for Full 12-State & 4-Control Equilibrium...');
+disp('Running fsolve for Full 12-State & 4-Control Equilibrium...');
 [z_trim, fval, exitflag, output] = fsolve(@(z) full_trim_objective(z, V_target, h_target), z0, options);
 
 if exitflag > 0
@@ -85,7 +85,7 @@ if exitflag > 0
     fprintf('---------------------------------------------------------------------\n');
 
     % Stability Analysis via System Linearization A Matrix
-    disp('📊 Computing System Linearization Matrix A and Stability Eigenvalues...');
+    disp('Computing System Linearization Matrix A and Stability Eigenvalues...');
     A_sys = zeros(12, 12);
     eps_val = 1e-6;
     for j = 1:12
@@ -107,19 +107,19 @@ if exitflag > 0
     % Verify Small-Disturbance Stability
     non_zero_reals = real(eig_vals(abs(real(eig_vals)) > 1e-5));
     if all(non_zero_reals < 0)
-        fprintf('  STATUS: ✅ AIRCRAFT IS STABLE AT THIS TRIM POINT!\n');
+        fprintf('  STATUS: AIRCRAFT IS STABLE AT THIS TRIM POINT!\n');
         fprintf('  (All non-zero dynamic eigenvalues have negative real parts).\n');
     else
-        fprintf('  STATUS: ⚠️ AIRCRAFT HAS UNSTABLE DYNAMIC MODES AT THIS TRIM POINT.\n');
+        fprintf('  STATUS: AIRCRAFT HAS UNSTABLE DYNAMIC MODES AT THIS TRIM POINT.\n');
     end
     fprintf('---------------------------------------------------------------------\n');
 
     
     % Save results
     save('trim_results.mat', 'x_trim', 'U_trim', 'z_trim', 'A_sys', 'eig_vals');
-    fprintf('💾 Saved trim results and linearization matrix to trim_results.mat\n\n');
+    fprintf('Saved trim results and linearization matrix to trim_results.mat\n\n');
 else
-    fprintf('\n❌ fsolve failed to find trim solution. Exitflag: %d\n', exitflag);
+    fprintf('\n fsolve failed to find trim solution. Exitflag: %d\n', exitflag);
 end
 
 

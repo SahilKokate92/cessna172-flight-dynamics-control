@@ -1,4 +1,5 @@
 % Cessna 172:  mass, geometry parameters and performance specifications
+% All data is taken from the Research article posted in docs folder
 c_bar = 1.4935; % m, mean aerodynamic chord
 b = 10.9118;    % m, wing span
 S = 16.1651;    % m2, wing area

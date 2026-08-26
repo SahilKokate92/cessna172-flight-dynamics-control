@@ -16,7 +16,7 @@ U = U_trim;
 %% Solving by using ODE45 function
 
 options = odeset('OutputFcn', @odeplot);
-disp('⏳ Running Simulation...');
+disp('Running Simulation...');
 
 [t, x] = ode45(@(t,x) C172NonlinearModel(t, x, U), t_span, x0);
 
