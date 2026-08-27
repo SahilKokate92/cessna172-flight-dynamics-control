@@ -1,114 +1,120 @@
-# ✈️ Cessna 172 Nonlinear 6-DOF Flight Dynamics, Trim & Simulation
+# ✈️ Cessna 172 Nonlinear 6-DOF Dynamics, Linearization & Flight Control System (FCS)
 
-An advanced MATLAB platform for full 6-Degree-of-Freedom (6-DOF) nonlinear flight dynamics modeling, numerical trim equilibrium optimization using `fsolve`, stability mode linearization analysis, and 3D flight trajectory visualization.
+An advanced MATLAB & Simulink platform for full 6-Degree-of-Freedom (6-DOF) nonlinear flight dynamics modeling, numerical trim equilibrium optimization using `fsolve`, dynamic stability linearization, and step-by-step modular Flight Control System (FCS) design in Simulink (`controller.slx`).
 
 ---
 
 ## 📌 Executive Summary & Architecture
 
-This repository models the complete nonlinear equations of motion (EOM) for a **Cessna 172 Skyhawk** fixed-wing aircraft.
+This repository models the complete nonlinear equations of motion (EOM) and state-space linearized dynamics for a **Cessna 172 Skyhawk** fixed-wing aircraft.
 
-The project is structured into two main development phases:
-- **Phase 1 (Current Baseline)**: Nonlinear 6-DOF EOM formulation, full 12-state numerical trimming ([`trim.m`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/matlabFiles/trim.m)), `ode45` numerical trajectory simulation ([`RunSimulation.m`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/matlabFiles/RunSimulation.m)), publication-quality plotting ([`dataplot.m`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/matlabFiles/dataplot.m)), and automatic plot exporting to `results/`.
-- **Phase 2 (Upcoming Development)**: Linearization state-space matrix extraction ($A, B, C, D$) and Flight Control System (FCS) design (Pitch/Roll Autopilots, Altitude/Airspeed Hold, PID/LQR control).
+The project is structured into modular development phases for step-by-step versioning:
+- **Baseline Dynamics & Trim (Completed ✅)**: Nonlinear 12-ODE formulation ([`C172NonlinearModel.m`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/C172NonlinearModel.m)), 12-state `fsolve` trim solver ([`trimAndStability.m`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/trimAndStability.m)), trajectory simulation ([`RunSimulation.m`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/RunSimulation.m)), and automated state-space linearization ([`liniarizeModel.m`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/liniarizeModel.m)).
+- **FCS Phase 1 (Completed ✅)**: Cascaded Pitch Control Loop ($\theta$ attitude tracking PID + $K_q$ pitch rate damping) in Simulink ([`src/controller.slx`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/controller.slx)).
+- **FCS Phase 2 (Upcoming 🚀)**: Roll Control Loop ($\phi$ attitude hold via aileron $\delta_a$).
+- **FCS Phase 3 (Upcoming 🚀)**: Yaw Damper & Turn Coordination ($\beta$ sideslip control via rudder $\delta_r$).
+- **FCS Phase 4 (Upcoming 🚀)**: Altitude Hold ($h$) & Airspeed Hold ($V$) Autopilot loops.
+- **FCS Phase 5 (Upcoming 🚀)**: Full 6-DOF Nonlinear Aircraft Dynamics & Guidance Integration.
 
 ---
 
-## ⚙️ Mathematical & Physics Foundation
+## ⚙️ Mathematical & Control Foundation
 
-The model implements the 12 nonlinear ordinary differential equations (ODEs) governing aircraft motion in body and Earth-fixed (NED) frames:
-
+### 1. 12-State Nonlinear Model
 $$\dot{x} = [\dot{V}, \dot{\alpha}, \dot{\beta}, \dot{p}, \dot{q}, \dot{r}, \dot{\phi}, \dot{\theta}, \dot{\psi}, \dot{x}_e, \dot{y}_e, \dot{z}_e]^T$$
 
-### Forces & Moments Balance
-1. **Aerodynamic Forces & Moments**: Evaluated using non-dimensional stability and control derivatives ($C_{L}, C_{D}, C_{Y}, C_{l}, C_{m}, C_{n}$).
-2. **Propulsion Model**: Maximum thrust $T_{\text{max}} = 2500\text{ N}$ scaled linearly by throttle $\delta_t \in [0, 1]$.
-3. **Gravity Forces**: Transformed to body axes via Euler pitch ($\theta$) and roll ($\phi$) angles.
+### 2. Linearized Longitudinal Subsystem (`sys_lon`)
+State vector: $x_{\text{lon}} = [V, \alpha, q, \theta, h]^T$, Input vector: $u_{\text{lon}} = [\delta_e, \delta_t]^T$.
+
+### 3. Phase 1 Pitch Control System Architecture
+```mermaid
+graph LR
+    ThetaRef["Theta_ref (Step Command)"] --> SumError["(+) Sum (-)"]
+    Demux["Demux States"] -->|Theta| SumError
+    SumError --> PID["PID Pitch Controller (-Kp, -Ki, -Kd)"]
+    
+    Demux -->|Pitch Rate q| KqGain["Pitch Rate Damping (+Kq)"]
+    
+    PID --> SumElevator["(+) Sum (+)"]
+    KqGain --> SumElevator
+    SumElevator --> Sat["Elevator Saturation [-25°, +25°]"]
+    Sat --> Mux["Mux Controls"]
+    ConstThrottle["Throttle Trim = 48.87%"] --> Mux
+    Mux --> Plant["Longitudinal State-Space Model"]
+    Plant --> Demux
+```
+
+#### Pitch Control Law:
+$$\delta_e(t) = \delta_{e,\text{trim}} - \left( K_p e_\theta + K_i \int_0^t e_\theta dt + K_d \dot{e}_\theta \right) + K_q q(t)$$
+
+- **Tuned Control Gains**: $K_p = 1.0$, $K_i = 0.2$, $K_d = 0.02$, $K_q = 0.45$.
+- **Trim Conditions**: Airspeed $V = 65\text{ m/s}$, Altitude $h = 500\text{ m}$, Throttle $\delta_{t,\text{trim}} = 48.87\%$, Elevator $\delta_{e,\text{trim}} = -0.18^\circ$.
 
 ---
 
 ## 🚀 How to Run the Code (User Guide)
 
-To execute the complete simulation and visualization pipeline, follow these 3 sequential steps in MATLAB:
-
 ```mermaid
 graph LR
-    A[Step 1: trim.m] -->|Solves Equilibrium & Saves trim_results.mat| B[Step 2: RunSimulation.m]
-    B -->|Generates 12-State Trajectory| C[Step 3: dataplot.m]
-    C -->|Renders & Saves Plots| D[results/ Folder]
+    A[Step 1: trimAndStability.m] -->|Solves Trim & Saves trim_results.mat| B[Step 2: liniarizeModel.m]
+    B -->|Extracts State-Space & Saves linearized_model.mat| C[Step 3: Open controller.slx]
+    C -->|Simulates Phase 1 Pitch Autopilot| D[results/ Pitch_Loop_Response.png]
 ```
 
-### **Step 1: Calculate Trim Condition (`trim.m`)**
-Run [`src/matlabFiles/trim.m`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/matlabFiles/trim.m) in the MATLAB Command Window:
+### **Step 1: Trim Calculation (`trimAndStability.m`)**
 ```matlab
-trim
+run('src/trimAndStability.m');
 ```
-- **Target Condition**: Airspeed $V = 65\text{ m/s}$, Altitude $h = 500\text{ m}$ ($z_e = -500\text{ m}$).
-- **Solver**: MATLAB `fsolve` optimizes 11 free parameters ($z = [\alpha, \beta, p, q, r, \phi, \theta, \delta_e, \delta_a, \delta_r, \delta_t]$) until all dynamic state rates evaluate to zero ($< 10^{-10}$).
-- **Stability Analysis**: Automatically linearizes the system matrix $A$ and checks all 12 eigenvalues ($\lambda_i$) to confirm Small-Disturbance Dynamic Stability (Short-Period, Phugoid, Dutch Roll, Roll Damping, Spiral modes).
-- **Output**: Saves `trim_results.mat` containing `x_trim` and `U_trim`.
+Solves full 12-state equilibrium at $V = 65\text{ m/s}, h = 500\text{ m}$ using `fsolve` and evaluates open-loop dynamic stability eigenvalues.
 
-### **Step 2: Execute Simulation (`RunSimulation.m`)**
-Run [`src/matlabFiles/RunSimulation.m`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/matlabFiles/RunSimulation.m) in MATLAB:
+### **Step 2: State-Space Linearization (`liniarizeModel.m`)**
 ```matlab
-RunSimulation
+run('src/liniarizeModel.m');
 ```
-- Integrates the 6-DOF nonlinear differential equations using `ode45` over $t \in [0, 60]\text{ s}$ starting from trimmed initial conditions `x_trim` and control inputs `U_trim`.
+Extracts linearized system matrices $A, B, C, D$ via numerical differentiation and splits into decoupled `sys_lon` and `sys_lat` models.
 
-### **Step 3: Generate & Save Visualizations (`dataplot.m`)**
-Run [`src/matlabFiles/dataplot.m`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/matlabFiles/dataplot.m) in MATLAB:
+### **Step 3: Execute Simulink Controller (`controller.slx`)**
+Open and run [`src/controller.slx`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/src/controller.slx) in Simulink:
 ```matlab
-dataplot
+open_system('src/controller.slx');
+sim('controller.slx');
 ```
-- Automatically renders combined **Figure 1** (6-panel state profile) and **Figure 2** (3D flight path trajectory) on screen (`drawnow`).
-- **Interactive Options**:
-  - Prompt 1: Generates **6 separate individual figure windows** for each state profile upon request (`y/n`).
-  - Prompt 2: Exports and saves all generated figures into the [`results/`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/results) directory (`y/n`).
+Automated callbacks (`InitFcn`) load `trim_results.mat`, `linearized_model.mat`, and `pitch_gains.mat`.
 
 ---
 
 ## 📊 Results & Visualizations
 
-Simulation output images stored in [`results/`](file:///D:/MATLAB/MY-PROJECTS/FixedWing/sixDofNonlinear/results):
+### 1. Phase 1: Pitch Control Loop Step Response ($5^\circ$ Step Command)
+![Pitch Loop Response](results/Pitch_Loop_Response.png)
 
-### 1. Combined 6-State Flight Profile
-![Combined Flight State](results/Flight_State_Combined.png)
-
-### 2. 3D Flight Trajectory Projection
-![3D Trajectory](results/3D_Trajectory.png)
-
-### 3. Individual State Breakdown Plots
-| Airspeed Profile ($V$) | Aerodynamic Angles ($\alpha, \beta$) |
-| :---: | :---: |
-| ![Airspeed](results/Airspeed_V.png) | ![Aerodynamic Angles](results/Aerodynamic_Angles.png) |
-
-| Angular Rates ($p, q, r$) | Euler Attitude Angles ($\phi, \theta, \psi$) |
-| :---: | :---: |
-| ![Angular Rates](results/Angular_Rates.png) | ![Euler Angles](results/Euler_Attitude_Angles.png) |
-
-| Altitude Profile ($h$) | 2D Position Ground Track ($Y_e$ vs $X_e$) |
-| :---: | :---: |
-| ![Altitude Profile](results/Altitude_Profile.png) | ![Ground Track](results/Ground_Track_2D.png) |
+#### Performance Metrics:
+- **Target Pitch Command ($\theta_{\text{ref}}$)**: $5.00^\circ$ ($0.0873\text{ rad}$)
+- **Rise Time ($t_r$, 10%–90%)**: $1.340\text{ s}$
+- **Percentage Overshoot (%OS)**: $7.56\%$
+- **Maximum Elevator Deflection**: $12.84^\circ$ (Smooth response, zero saturation)
 
 ---
 
-## 🗺️ Project Roadmap & Development Phases
+## 🗺️ Project Roadmap & Version-Wise Development
 
 ```text
-Phase 1: Open-Loop Dynamics & Trim (COMPLETED ✅)
+Baseline Open-Loop Dynamics & Linearization (COMPLETED ✅)
 ├── [x] 12-ODE Nonlinear EOM Formulation (C172NonlinearModel.m)
-├── [x] Full 12-State & 4-Control Trim Solver using fsolve (trim.m)
-├── [x] Altitude (h = 500m) & Speed (V = 65m/s) Trim Condition
-├── [x] Dynamic Mode Eigenvalue Stability Analysis
-├── [x] ode45 Numerical Trajectory Simulation (RunSimulation.m)
-└── [x] Interactive Multi-Figure Plotting & Exporter (dataplot.m)
+├── [x] Full 12-State & 4-Control Trim Solver using fsolve (trimAndStability.m)
+├── [x] State-Space Linearization & Subsystem Decoupling (liniarizeModel.m)
+└── [x] Dynamic Mode Eigenvalue Stability Analysis
 
-Phase 2: Flight Control System Design (UPCOMING 🚀)
-├── [ ] State-Space Linearization Extraction (A, B, C, D Matrix)
-├── [ ] Transfer Function Derivation (Elevator-to-Pitch, Aileron-to-Roll)
-├── [ ] Pitch & Roll Autopilot Design (PID Control)
-├── [ ] Altitude Hold & Heading Hold Autopilot
-└── [ ] LQR / Robust Flight Control & Disturbances Testing
+Flight Control System (FCS) Development in Simulink (IN PROGRESS 🚀)
+├── [x] Phase 1: Pitch Control Loop (controller.slx)
+│       ├── Pitch Angle Tracking PID Controller (Kp=1.0, Ki=0.2, Kd=0.02)
+│       ├── Pitch Rate Damping (Kq=0.45) for Short-Period Damping
+│       ├── Elevator Saturation Limits (±25 deg)
+│       └── Trim Throttle Setting Initialization (48.87%)
+├── [ ] Phase 2: Roll Control Loop (Aileron-to-Roll Angle Autopilot)
+├── [ ] Phase 3: Yaw Damper & Turn Coordination (Rudder-to-Sideslip Autopilot)
+├── [ ] Phase 4: Altitude Hold & Airspeed Hold Autopilots
+└── [ ] Phase 5: Full 6-DOF Nonlinear Dynamics & Guidance Integration
 ```
 
 ---
@@ -121,25 +127,18 @@ sixDofNonlinear/
 ├── README.md                           # Main Project Documentation
 ├── LICENSE                             # License file
 │
-├── results/                            # Exported High-Res Simulation Plots
-│   ├── Flight_State_Combined.png       # Combined 6-panel state profile
-│   ├── 3D_Trajectory.png               # 3D trajectory isometric view
-│   ├── Airspeed_V.png                  # Separate Airspeed plot
-│   ├── Aerodynamic_Angles.png          # Separate AoA & Sideslip plot
-│   ├── Angular_Rates.png               # Separate Roll, Pitch, Yaw rates plot
-│   ├── Euler_Attitude_Angles.png       # Separate Roll, Pitch, Yaw angles plot
-│   ├── Altitude_Profile.png            # Separate Altitude profile plot
-│   └── Ground_Track_2D.png             # Separate 2D ground position track plot
+├── results/                            # Simulation Output Plots
+│   ├── Pitch_Loop_Response.png         # Phase 1 Pitch Control Step Response Plot
+│   ├── Flight_State_Combined.png       # 6-panel open-loop state profile
+│   └── 3D_Trajectory.png               # 3D trajectory isometric view
 │
 └── src/
-    └── matlabFiles/
-        ├── C172NonlinearModel.m        # 6-DOF 12-ODE Nonlinear Aircraft EOM
-        ├── trim.m                      # Full 12-State fsolve Trim Solver & Stability Analysis
-        ├── RunSimulation.m             # ode45 Simulation Integration Script
-        ├── dataplot.m                  # Interactive Plotter & Figure Exporter
-        ├── initializeParameters_C172.m # Loader for parameters and mat files
-        ├── aircraft_parameters.m       # Mass, inertia, and geometric data script
-        ├── stabilityNcontrolDerivatives.m # Stability & control derivatives script
-        ├── aircraft_parameters.mat     # Saved aircraft parameters MAT file
-        └── Stability&ControlDerivative.mat # Saved stability derivatives MAT file
+    ├── controller.slx                  # Main Simulink Flight Control System Model
+    ├── C172NonlinearModel.m            # 6-DOF 12-ODE Nonlinear Aircraft EOM
+    ├── trimAndStability.m              # Full 12-State fsolve Trim Solver
+    ├── liniarizeModel.m                # State-Space Linearization & Decoupling
+    ├── RunSimulation.m                 # ode45 Simulation Integration Script
+    ├── dataplot.m                      # Multi-Figure Plotter & Exporter
+    ├── aircraft_parameters.m           # Mass, inertia, and geometric data script
+    └── stabilityNcontrolDerivatives.m  # Aerodynamic stability derivatives script
 ```
