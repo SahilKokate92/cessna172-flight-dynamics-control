@@ -1,10 +1,4 @@
 % Cessna 172 6-DOF Nonlinear Simulation Analysis
-
-if ~exist('t', 'var') || ~exist('x', 'var')
-    disp('Simulation data not found in workspace. Executing RunSimulation.m...');
-    run('RunSimulation.m');
-end
-
 % Set global graphics defaults for publication-quality plots
 set(0, 'DefaultAxesFontName', 'Arial');
 set(0, 'DefaultAxesFontSize', 11);
